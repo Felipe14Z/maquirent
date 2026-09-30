@@ -23,8 +23,8 @@ ALLOWED_HOSTS = ['*']
 # >>> EDITA ESTOS TRES VALORES <<<
 # ---------------------------------------------------------------
 ALUMNO = {
-    'nombre': 'Tu Nombre Completo',
-    'seccion': 'Tu Sección',
+    'nombre': 'Luis Felipe Zapata',
+    'seccion': 'AP-N4-C2(E-F)/D',
     'anio': '2026',
 }
 
