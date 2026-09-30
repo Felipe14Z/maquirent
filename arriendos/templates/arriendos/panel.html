@@ -1,0 +1,242 @@
+{% extends 'arriendos/base.html' %}
+{# panel.html: Panel del ADMIN (solo rol ADMIN). Sidebar con Dashboard, Categorías, Marcas, Equipos,
+   Contratos y Usuarios. Solo aquí aparece el acceso a la documentación Swagger (/api/docs/). #}
+{% block title %}Panel Admin · MaquiRent{% endblock %}
+{% block content %}
+<div class="admin-shell">
+  <nav class="admin-tabs">
+    <a data-sec="dashboard" class="act">🏠 Inicio</a>
+    <a data-sec="equipos">🚜 Equipos</a>
+    <a data-sec="categorias">🏷 Categorías</a>
+    <a data-sec="marcas">🎖 Marcas</a>
+    <a data-sec="contratos">📄 Contratos</a>
+    <a data-sec="usuarios">👥 Usuarios</a>
+    <a href="/catalogo/" class="ext">↗ Ver tienda</a>
+  </nav>
+
+  <div class="admin-main">
+    <!-- INICIO / RESUMEN -->
+    <section class="sec" id="sec-dashboard">
+      <div class="panel-hero">
+        <div>
+          <small id="fecha"></small>
+          <h1>Centro de control</h1>
+          <p>Hola, <b id="bienv"></b>. Este es el resumen de la flota MaquiRent.</p>
+        </div>
+        <div class="hero-btns">
+          <button class="btn amarillo" onclick="mostrar('equipos');abrirEquipo(null)">+ Nuevo equipo</button>
+          <button class="btn sec" onclick="mostrar('contratos')">Ver contratos</button>
+        </div>
+      </div>
+      <div class="kpis">
+        <div class="kpi" style="--c:#2563EB"><span class="kic">📦</span><div><b id="st-eq">0</b><small>Equipos</small></div></div>
+        <div class="kpi" style="--c:#F5B301"><span class="kic">🏷</span><div><b id="st-ca">0</b><small>Categorías</small></div></div>
+        <div class="kpi" style="--c:#7C3AED"><span class="kic">🎖</span><div><b id="st-ma">0</b><small>Marcas</small></div></div>
+        <div class="kpi" style="--c:#1E9E5A"><span class="kic">📄</span><div><b id="st-co">0</b><small>Contratos</small></div></div>
+        <div class="kpi" style="--c:#E08A00"><span class="kic">⏳</span><div><b id="st-pe">0</b><small>Pendientes de pago</small></div></div>
+      </div>
+      <div class="dash-grid">
+        <div class="card"><h3>Flota por categoría</h3><p class="sub">Unidades disponibles hoy</p><div id="barras"></div></div>
+        <div class="card"><h3>⚠ Stock por agotarse</h3><p class="sub">Equipos bajo su mínimo</p><div id="alertas"></div></div>
+      </div>
+      <div class="card"><h3>Estado del sistema</h3><div class="chips-estado" id="estado"></div></div>
+    </section>
+
+    <!-- CATEGORÍAS / MARCAS (CRUD simple) -->
+    <section class="sec" id="sec-categorias" style="display:none">
+      <h1>🏷 Categorías</h1><p class="sub">Agrupa la maquinaria por tipo.</p>
+      <div class="acciones" style="margin:0 0 12px"><button class="btn" onclick="abrirSimple('categorias')">+ Nueva categoría</button></div>
+      <div class="tabla-wrap"><table><thead><tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr></thead><tbody id="tb-categorias"></tbody></table></div>
+    </section>
+    <section class="sec" id="sec-marcas" style="display:none">
+      <h1>🎖 Marcas</h1><p class="sub">Fabricantes de los equipos.</p>
+      <div class="acciones" style="margin:0 0 12px"><button class="btn" onclick="abrirSimple('marcas')">+ Nueva marca</button></div>
+      <div class="tabla-wrap"><table><thead><tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr></thead><tbody id="tb-marcas"></tbody></table></div>
+    </section>
+
+    <!-- EQUIPOS -->
+    <section class="sec" id="sec-equipos" style="display:none">
+      <h1>🚜 Equipos</h1><p class="sub">Agregar, editar y eliminar maquinaria. El stock se actualiza con los pagos y cancelaciones.</p>
+      <div class="acciones" style="margin:0 0 12px"><button class="btn" onclick="abrirEquipo(null)">+ Nuevo equipo</button></div>
+      <div class="tabla-wrap"><table><thead><tr><th>Equipo</th><th>Categoría</th><th>Marca</th><th>Tarifa/día</th><th>Garantía</th><th>Stock</th><th>Acciones</th></tr></thead><tbody id="tb-equipos"></tbody></table></div>
+    </section>
+
+    <!-- CONTRATOS -->
+    <section class="sec" id="sec-contratos" style="display:none">
+      <h1>📄 Contratos</h1><p class="sub">Cambia el estado: ENTREGADO, COMPLETADO (devuelve stock) o CANCELADO (repone stock si estaba pagado).</p>
+      <div class="tabla-wrap"><table><thead><tr><th>#</th><th>Cliente</th><th>Detalle</th><th>Total</th><th>Estado</th><th>Cambiar a</th></tr></thead><tbody id="tb-contratos"></tbody></table></div>
+    </section>
+
+    <!-- USUARIOS -->
+    <section class="sec" id="sec-usuarios" style="display:none">
+      <h1>👥 Usuarios</h1><p class="sub">Usuarios registrados en la plataforma.</p>
+      <div class="tabla-wrap"><table><thead><tr><th>ID</th><th>Usuario</th><th>Correo</th><th>Rol</th><th>Empresa</th></tr></thead><tbody id="tb-usuarios"></tbody></table></div>
+    </section>
+  </div>
+</div>
+
+<dialog id="dlgS">
+  <h2 id="sT">Registro</h2>
+  <label>Nombre</label><input id="sN">
+  <label>Descripción</label><input id="sD">
+  <div class="acciones"><button class="btn sec" onclick="dlgS.close()">Cancelar</button><button class="btn" id="sOk">Guardar</button></div>
+</dialog>
+
+<dialog id="dlgE">
+  <h2 id="eT">Equipo</h2>
+  <label>Nombre</label><input id="eN">
+  <label>Categoría</label><select id="eC"></select>
+  <label>Marca</label><select id="eM"></select>
+  <label>Descripción</label><textarea id="eD" rows="2"></textarea>
+  <label>Tarifa diaria</label><input id="eTa" type="number" min="1">
+  <label>Garantía</label><input id="eG" type="number" min="0">
+  <label>Stock (unidades en flota)</label><input id="eS" type="number" min="0">
+  <label>Alertar cuando el stock sea ≤</label><input id="eMin" type="number" min="0" value="2">
+  <label>Imagen del equipo (opcional)</label><input id="eImg" type="file" accept="image/*">
+  <div class="acciones"><button class="btn sec" onclick="dlgE.close()">Cancelar</button><button class="btn" id="eOk">Guardar</button></div>
+</dialog>
+{% endblock %}
+{% block scripts %}
+<script>
+const $ = id => document.getElementById(id);
+const SIGUIENTE = { PENDIENTE: ['CANCELADO'], PAGADO: ['ENTREGADO', 'CANCELADO'], ENTREGADO: ['COMPLETADO'], COMPLETADO: [], CANCELADO: [] };
+const cache = { categorias: [], marcas: [], equipos: [] };
+let simpleRec = null, simpleId = null, equipoId = null;
+
+/* ---- Navegación lateral ---- */
+const CARGADORES = { dashboard: dashboard, categorias: () => listarSimple('categorias'), marcas: () => listarSimple('marcas'),
+  equipos: listarEquipos, contratos: listarContratos, usuarios: listarUsuarios };
+function mostrar(s) {
+  document.querySelectorAll('.sec').forEach(x => x.style.display = 'none');
+  $('sec-' + s).style.display = '';
+  document.querySelectorAll('.admin-tabs a[data-sec]').forEach(a => a.classList.toggle('act', a.dataset.sec === s));
+  CARGADORES[s]();
+}
+document.querySelectorAll('.admin-tabs a[data-sec]').forEach(a => a.onclick = () => mostrar(a.dataset.sec));
+
+/* ---- Inicio / resumen ---- */
+async function dashboard() {
+  const [d, es, alertas] = await Promise.all([api('/dashboard/'), api('/maquinarias/'), api('/alertas-stock/')]);
+  $('bienv').textContent = Auth.username;
+  $('fecha').textContent = new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+  $('st-eq').textContent = d.equipos; $('st-ca').textContent = d.categorias;
+  $('st-ma').textContent = d.marcas; $('st-co').textContent = d.contratos; $('st-pe').textContent = d.pendientes;
+
+  /* Barras: unidades disponibles por categoría */
+  const porCat = {};
+  es.forEach(e => porCat[e.categoria_nombre] = (porCat[e.categoria_nombre] || 0) + e.stock);
+  const max = Math.max(1, ...Object.values(porCat));
+  const colores = ['#2563EB', '#F5B301', '#7C3AED', '#1E9E5A', '#D63B3B'];
+  $('barras').innerHTML = Object.entries(porCat).map(([n, v], i) => `
+    <div class="barra"><div class="barra-t"><span>${esc(n)}</span><b>${v}</b></div>
+    <div class="barra-f"><i style="width:${v / max * 100}%;background:${colores[i % 5]}"></i></div></div>`).join('');
+
+  /* Alertas de stock bajo */
+  $('alertas').innerHTML = alertas.length
+    ? alertas.map(e => `<div class="alerta-item"><div><b>${esc(e.nombre)}</b><small>${esc(e.categoria_nombre)}</small></div>
+        <span class="badge ${e.stock === 0 ? 'cero' : 'bajo'}">${e.stock === 0 ? 'Agotado' : 'Quedan ' + e.stock}</span></div>`).join('')
+    : '<div class="alerta-box ok">✔ Todo el inventario tiene stock suficiente.</div>';
+
+  /* Estado del sistema (el enlace a Swagger solo aparece aquí, para el ADMIN) */
+  const motor = d.motor === 'mysql' ? 'MySQL' : d.motor;
+  $('estado').innerHTML = `<span class="${d.api ? 'chip-ok' : 'chip-mal'}">API REST operativa</span>
+    <span class="${d.db_ok ? 'chip-ok' : 'chip-mal'}">${motor} ${d.db_ok ? 'conectada' : 'sin conexión'}</span>
+    <span class="chip-ok">JWT con claims de rol activo</span>
+    <a class="chip-link" href="/api/docs/" target="_blank">📚 Documentación API · /api/docs/</a>`;
+}
+
+/* ---- CRUD simple (categorías y marcas) ---- */
+async function listarSimple(rec) {
+  cache[rec] = await api('/' + rec + '/', { auth: false });
+  $('tb-' + rec).innerHTML = cache[rec].map(i => `<tr><td>${i.id}</td><td><b>${esc(i.nombre)}</b></td><td>${esc(i.descripcion)}</td>
+    <td><button class="btn sec small" onclick="abrirSimple('${rec}',${i.id})">Editar</button>
+    <button class="btn peligro small" onclick="borrarSimple('${rec}',${i.id})">Eliminar</button></td></tr>`).join('')
+    || '<tr><td colspan="4">Sin registros.</td></tr>';
+}
+function abrirSimple(rec, id) {
+  simpleRec = rec; simpleId = id || null;
+  const it = id ? cache[rec].find(x => x.id === id) : null;
+  $('sT').textContent = (id ? 'Editar ' : 'Nueva ') + (rec === 'categorias' ? 'categoría' : 'marca');
+  $('sN').value = it ? it.nombre : ''; $('sD').value = it ? it.descripcion : '';
+  $('dlgS').showModal();
+}
+$('sOk').onclick = async () => {
+  try {
+    await api(simpleId ? `/${simpleRec}/${simpleId}/` : `/${simpleRec}/`,
+      { method: simpleId ? 'PUT' : 'POST', body: { nombre: $('sN').value, descripcion: $('sD').value } });
+    $('dlgS').close(); toast('Guardado'); listarSimple(simpleRec);
+  } catch (e) { toast(msg(e), 'error'); }
+};
+async function borrarSimple(rec, id) {
+  if (!confirm('¿Eliminar este registro?')) return;
+  try { await api(`/${rec}/${id}/`, { method: 'DELETE' }); toast('Eliminado'); listarSimple(rec); }
+  catch (e) { toast(msg(e), 'error'); }
+}
+
+/* ---- Equipos ---- */
+async function listarEquipos() {
+  cache.equipos = await api('/maquinarias/');
+  $('tb-equipos').innerHTML = cache.equipos.map(e => `<tr>
+    <td>${e.imagen ? `<img class="mini" src="${e.imagen}">` : ''}<b>${esc(e.nombre)}</b></td><td>${esc(e.categoria_nombre)}</td><td>${esc(e.marca_nombre) || '—'}</td>
+    <td>${clp(e.tarifa_diaria)}</td><td>${clp(e.garantia)}</td><td>${badgeStock(e)}</td>
+    <td><button class="btn sec small" onclick="abrirEquipo(${e.id})">Editar</button>
+    <button class="btn peligro small" onclick="borrarEquipo(${e.id})">Eliminar</button></td></tr>`).join('');
+}
+async function abrirEquipo(id) {
+  const [cs, ms] = await Promise.all([api('/categorias/', { auth: false }), api('/marcas/', { auth: false })]);
+  $('eC').innerHTML = cs.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+  $('eM').innerHTML = '<option value="">Sin marca</option>' + ms.map(m => `<option value="${m.id}">${esc(m.nombre)}</option>`).join('');
+  equipoId = id;
+  const e = id ? cache.equipos.find(x => x.id === id) : null;
+  $('eT').textContent = e ? 'Editar equipo' : 'Nuevo equipo';
+  $('eN').value = e ? e.nombre : ''; $('eD').value = e ? e.descripcion : '';
+  $('eTa').value = e ? e.tarifa_diaria : ''; $('eG').value = e ? e.garantia : '';
+  $('eS').value = e ? e.stock : 0; $('eMin').value = e ? e.stock_minimo : 2;
+  $('eImg').value = '';
+  if (e) { $('eC').value = e.categoria; $('eM').value = e.marca || ''; }
+  $('dlgE').showModal();
+}
+$('eOk').onclick = async () => {
+  const body = new FormData();
+  body.append('nombre', $('eN').value); body.append('categoria', $('eC').value);
+  body.append('marca', $('eM').value); body.append('descripcion', $('eD').value);
+  body.append('tarifa_diaria', $('eTa').value); body.append('garantia', $('eG').value);
+  body.append('stock', $('eS').value); body.append('stock_minimo', $('eMin').value);
+  if ($('eImg').files[0]) body.append('imagen', $('eImg').files[0]);
+  try {
+    await api(equipoId ? `/maquinarias/${equipoId}/` : '/maquinarias/', { method: equipoId ? 'PUT' : 'POST', body });
+    $('dlgE').close(); toast('Equipo guardado'); listarEquipos();
+  } catch (e) { toast(msg(e), 'error'); }
+};
+async function borrarEquipo(id) {
+  if (!confirm('¿Eliminar este equipo?')) return;
+  try { await api(`/maquinarias/${id}/`, { method: 'DELETE' }); toast('Equipo eliminado'); listarEquipos(); }
+  catch (e) { toast(msg(e), 'error'); }
+}
+
+/* ---- Contratos ---- */
+async function listarContratos() {
+  const cs = await api('/contratos/');
+  $('tb-contratos').innerHTML = cs.map(c => `<tr>
+    <td>${c.id}</td><td>${esc(c.usuario_nombre)}</td>
+    <td>${c.detalles.map(d => esc(d.equipo_nombre) + ' ×' + d.cantidad).join('<br>')}</td>
+    <td>${clp(c.total)}</td><td><span class="badge b-${c.estado}">${c.estado}</span></td>
+    <td>${SIGUIENTE[c.estado].map(s => `<button class="btn small ${s === 'CANCELADO' ? 'peligro' : ''}" onclick="estado(${c.id},'${s}')">${s}</button>`).join(' ') || '—'}</td></tr>`).join('')
+    || '<tr><td colspan="6">Sin contratos.</td></tr>';
+}
+async function estado(id, nuevo) {
+  try { await api(`/contratos/${id}/estado/`, { method: 'PATCH', body: { estado: nuevo } });
+    toast('Estado actualizado: ' + nuevo); listarContratos(); }
+  catch (e) { toast(msg(e), 'error'); }
+}
+
+/* ---- Usuarios ---- */
+async function listarUsuarios() {
+  const us = await api('/usuarios/');
+  $('tb-usuarios').innerHTML = us.map(u => `<tr><td>${u.id}</td><td><b>${esc(u.username)}</b></td><td>${esc(u.email)}</td>
+    <td><span class="tag">${u.rol}</span></td><td>${esc(u.empresa)}</td></tr>`).join('');
+}
+
+if (requerir('ADMIN')) mostrar('dashboard');
+</script>
+{% endblock %}

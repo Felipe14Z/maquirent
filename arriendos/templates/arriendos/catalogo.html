@@ -1,0 +1,108 @@
+{% extends 'arriendos/base.html' %}
+{# catalogo.html: catálogo público estilo "Maquinaria". Filtros laterales, tarjetas y detalle.
+   El CLIENTE puede agregar al carro; el ADMIN solo ve (gestiona desde /panel/). #}
+{% block title %}Maquinaria · MaquiRent{% endblock %}
+{% block content %}
+<div class="container">
+  <h1>Maquinaria</h1>
+  <div class="cat-layout">
+    <aside>
+      <div class="buscador"><input id="q" placeholder="¿Qué estás buscando?"><button id="bq">🔍</button></div>
+      <div class="chips"><span class="chip" id="reset">Restablecer todo</span><span class="chip" id="chipCat" style="display:none"></span></div>
+      <div class="filtro-panel">
+        <h2>Encuentra tu maquinaria</h2>
+        <label>Categoría</label><select id="cat"><option value="">- Seleccionar Categoría -</option></select>
+        <label>Marca</label><select id="mar"><option value="">- Seleccionar Marca -</option></select>
+        <label>Tarifa diaria mínima</label><input id="tmin" type="number" placeholder="Ej: 10000">
+        <label>Tarifa diaria máxima</label><input id="tmax" type="number" placeholder="Ej: 200000">
+        <label>Ordenar por</label>
+        <select id="ord"><option value="nombre">Nombre</option><option value="tarifa_diaria">Tarifa menor a mayor</option><option value="-tarifa_diaria">Tarifa mayor a menor</option></select>
+        <label class="check"><input type="checkbox" id="bajo"> Solo stock bajo</label>
+      </div>
+    </aside>
+    <div class="equipos-grid" id="lista"></div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <h2 id="dtitulo"></h2>
+  <p id="dinfo" class="sub" style="margin-top:8px"></p>
+  <div id="dform">
+    <label>Cantidad</label><input id="dcant" type="number" min="1" value="1">
+    <label>Fecha de inicio</label><input id="dini" type="date">
+    <label>Fecha de término</label><input id="dfin" type="date">
+  </div>
+  <div class="acciones">
+    <button class="btn sec" id="dcancel">Cerrar</button>
+    <button class="btn" id="dok">Agregar al carro</button>
+  </div>
+</dialog>
+{% endblock %}
+{% block scripts %}
+<script>
+let items = [], sel = null;
+const $ = id => document.getElementById(id);
+
+async function cargar() {
+  const p = new URLSearchParams();
+  if ($('q').value) p.set('search', $('q').value);
+  if ($('cat').value) p.set('categoria', $('cat').value);
+  if ($('mar').value) p.set('marca', $('mar').value);
+  if ($('tmin').value) p.set('tarifa_min', $('tmin').value);
+  if ($('tmax').value) p.set('tarifa_max', $('tmax').value);
+  if ($('bajo').checked) p.set('stock_bajo', 'true');
+  p.set('ordering', $('ord').value);
+  items = await api('/maquinarias/?' + p, { auth: false });
+  const chip = $('chipCat');
+  if ($('cat').value) { chip.style.display = ''; chip.textContent = $('cat').selectedOptions[0].text + ' ×'; } else chip.style.display = 'none';
+  $('lista').innerHTML = items.map(e => `
+    <div class="card equipo">
+      <div class="foto">${e.imagen ? `<img src="${e.imagen}" alt="${esc(e.nombre)}">` : (ICONOS[e.categoria_nombre] || '🔧')}</div>
+      <h3>${esc(e.nombre)}</h3>
+      <div class="spec"><b>Marca:</b> ${esc(e.marca_nombre) || '—'}<br>
+        <b>Tarifa diaria:</b> ${clp(e.tarifa_diaria)}<br><b>Garantía:</b> ${clp(e.garantia)}</div>
+      <div style="margin-top:8px">${badgeStock(e)}</div>
+      <button class="btn" onclick="detalle(${e.id})">Ver detalle</button>
+    </div>`).join('') || '<p>No hay resultados.</p>';
+}
+
+function detalle(id) {
+  sel = items.find(e => e.id === id);
+  $('dtitulo').textContent = sel.nombre;
+  $('dinfo').innerHTML = (sel.imagen ? `<img src="${sel.imagen}" style="width:100%;border-radius:12px;margin-bottom:10px">` : '') + `${esc(sel.categoria_nombre)} · ${esc(sel.marca_nombre) || 'Sin marca'}<br>${esc(sel.descripcion)}<br>
+    <b>${clp(sel.tarifa_diaria)}/día</b> · Garantía ${clp(sel.garantia)} · ${badgeStock(sel)}`;
+  const esCliente = Auth.rol === 'CLIENTE';
+  $('dform').style.display = esCliente ? '' : 'none';
+  $('dok').style.display = (esCliente || !Auth.logged()) ? '' : 'none';
+  $('dok').disabled = sel.stock === 0;
+  $('dok').textContent = Auth.logged() ? 'Agregar al carro' : 'Ingresar para arrendar';
+  const hoy = new Date().toISOString().slice(0, 10);
+  $('dini').value = hoy; $('dfin').value = hoy; $('dcant').value = 1;
+  $('dlg').showModal();
+}
+
+$('dcancel').onclick = () => $('dlg').close();
+$('dok').onclick = async () => {
+  if (!Auth.logged()) { location.href = '/login/'; return; }
+  try {
+    await api('/carro-arriendo/', { method: 'POST', body: {
+      equipo: sel.id, cantidad: +$('dcant').value, fecha_inicio: $('dini').value, fecha_fin: $('dfin').value } });
+    $('dlg').close(); toast('Agregado al carro'); construirMenu();
+  } catch (e) { toast(msg(e), 'error'); }
+};
+
+$('reset').onclick = () => { ['q', 'cat', 'mar', 'tmin', 'tmax'].forEach(i => $(i).value = ''); $('bajo').checked = false; cargar(); };
+$('chipCat').onclick = () => { $('cat').value = ''; cargar(); };
+$('bq').onclick = cargar;
+
+(async () => {
+  const [cats, marcas] = await Promise.all([api('/categorias/', { auth: false }), api('/marcas/', { auth: false })]);
+  $('cat').innerHTML += cats.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+  $('mar').innerHTML += marcas.map(m => `<option value="${m.id}">${esc(m.nombre)}</option>`).join('');
+  const pre = new URLSearchParams(location.search).get('categoria');
+  if (pre) $('cat').value = pre;
+  ['q', 'cat', 'mar', 'tmin', 'tmax', 'ord', 'bajo'].forEach(i => $(i).addEventListener('input', cargar));
+  cargar();
+})();
+</script>
+{% endblock %}

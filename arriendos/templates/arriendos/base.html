@@ -1,0 +1,24 @@
+{% load static %}
+{# base.html: plantilla base. Contiene menú, footer con datos del alumno y carga de CSS/JS. #}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}MaquiRent · Arriendo de maquinaria{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'arriendos/css/style.css' %}">
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="/">⚙ Maqui<span>Rent</span></a>
+    <nav id="menu"></nav>
+  </header>
+  <main>{% block content %}{% endblock %}</main>
+  <footer class="footer">
+    MaquiRent · {{ ALUMNO.nombre }} · Sección {{ ALUMNO.seccion }} · {{ ALUMNO.anio }}
+  </footer>
+  <div id="toasts"></div>
+  <script src="{% static 'arriendos/js/app.js' %}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

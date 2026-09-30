@@ -1,0 +1,26 @@
+{% extends 'arriendos/base.html' %}
+{# registro.html: alta de empresa constructora (rol CLIENTE). #}
+{% block title %}Registro · MaquiRent{% endblock %}
+{% block content %}
+<div class="card form-card">
+  <h1>Crear cuenta</h1>
+  <p class="sub">Registra tu empresa constructora.</p>
+  <label>Usuario</label><input id="u">
+  <label>Correo</label><input id="e" type="email">
+  <label>Empresa</label><input id="emp">
+  <label>Contraseña (mín. 6)</label><input id="p" type="password">
+  <div class="acciones"><button class="btn" id="go">Registrarme</button></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('go').onclick = async () => {
+  try {
+    await api('/auth/register/', { method: 'POST', auth: false,
+      body: { username: u.value, email: e.value, empresa: emp.value, password: p.value } });
+    toast('Cuenta creada, ahora ingresa');
+    setTimeout(() => location.href = '/login/', 900);
+  } catch (err) { toast(msg(err), 'error'); }
+};
+</script>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'arriendos/base.html' %}
+{# login.html: inicio de sesión JWT. Guarda access, refresh y rol. #}
+{% block title %}Ingresar · MaquiRent{% endblock %}
+{% block content %}
+<div class="card form-card">
+  <h1>Ingresar</h1>
+  <p class="sub">Accede con tu cuenta MaquiRent.</p>
+  <label>Usuario</label><input id="u">
+  <label>Contraseña</label><input id="p" type="password">
+  <div class="acciones"><button class="btn" id="go">Entrar</button></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('go').onclick = async () => {
+  try {
+    const d = await api('/auth/login/', { method: 'POST', auth: false,
+      body: { username: u.value, password: p.value } });
+    Auth.save(d);
+    location.href = d.rol === 'ADMIN' ? '/panel/' : '/catalogo/';
+  } catch (e) { toast('Usuario o contraseña incorrectos', 'error'); }
+};
+</script>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'arriendos/base.html' %}
+{# contratos.html: historial de contratos del cliente y botón de pago (PENDIENTE -> PAGADO). #}
+{% block title %}Mis contratos · MaquiRent{% endblock %}
+{% block content %}
+<div class="container">
+  <h1>Mis contratos</h1>
+  <p class="sub">Al pagar, el stock del equipo se descuenta automáticamente.</p>
+  <div id="lista"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function cargar() {
+  const cs = await api('/mis-contratos/');
+  lista.innerHTML = cs.map(c => `
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <h3>Contrato #${c.id}</h3>
+        <span class="badge b-${c.estado}">${c.estado}</span>
+      </div>
+      <ul style="margin:10px 0 10px 18px">${c.detalles.map(d =>
+        `<li>${esc(d.equipo_nombre)} × ${d.cantidad} · ${d.fecha_inicio} → ${d.fecha_fin} (${d.dias} días) · ${clp(d.subtotal)}</li>`).join('')}</ul>
+      <b>Total: ${clp(c.total)}</b>
+      ${c.estado === 'PENDIENTE' ? `<div class="acciones"><button class="btn ok" onclick="pagar(${c.id})">Registrar pago</button></div>` : ''}
+    </div>`).join('') || '<p>Aún no tienes contratos.</p>';
+}
+async function pagar(id) {
+  try { await api('/contratos/' + id + '/pagar/', { method: 'POST' }); toast('Pago registrado'); cargar(); }
+  catch (e) { toast(msg(e), 'error'); }
+}
+if (requerir('CLIENTE')) cargar();
+</script>
+{% endblock %}

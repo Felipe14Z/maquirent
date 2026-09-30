@@ -1,0 +1,51 @@
+{% extends 'arriendos/base.html' %}
+{# carro.html: carro persistente del cliente. Permite quitar ítems y confirmar el contrato (checkout). #}
+{% block title %}Mi carro · MaquiRent{% endblock %}
+{% block content %}
+<div class="container">
+  <h1>Mi carro de arriendo</h1>
+  <p class="sub">Puedes cambiar la cantidad y las fechas. El carro se guarda en la base de datos y sigue aquí aunque cierres sesión.</p>
+  <div class="tabla-wrap"><table>
+    <thead><tr><th>Equipo</th><th>Cant.</th><th>Periodo</th><th>Días</th><th>Tarifa/día</th><th>Garantía</th><th>Subtotal</th><th></th></tr></thead>
+    <tbody id="filas"></tbody>
+  </table></div>
+  <div class="total">Total: <span id="total">$0</span></div>
+  <div class="acciones">
+    <button class="btn sec" id="vaciar">Vaciar carro</button>
+    <button class="btn" id="confirmar">Confirmar contrato</button>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function cargar() {
+  const c = await api('/carro-arriendo/');
+  filas.innerHTML = c.items.map(i => `<tr>
+    <td><b>${esc(i.equipo_nombre)}</b></td><td><input type="number" min="1" value="${i.cantidad}" style="width:70px" onchange="actualizar(${i.id},{cantidad:+this.value})"></td>
+    <td><input type="date" value="${i.fecha_inicio}" onchange="actualizar(${i.id},{fecha_inicio:this.value})">
+        <input type="date" value="${i.fecha_fin}" onchange="actualizar(${i.id},{fecha_fin:this.value})" style="margin-top:4px"></td><td>${i.dias}</td>
+    <td>${clp(i.tarifa_diaria)}</td><td>${clp(i.garantia)}</td><td><b>${clp(i.subtotal)}</b></td>
+    <td><button class="btn peligro small" onclick="quitar(${i.id})">Quitar</button></td></tr>`).join('')
+    || '<tr><td colspan="8">Tu carro está vacío.</td></tr>';
+  total.textContent = clp(c.total);
+}
+async function actualizar(id, cambios) {
+  try { await api('/carro-arriendo/' + id + '/', { method: 'PATCH', body: cambios }); toast('Carro actualizado'); }
+  catch (e) { toast(msg(e), 'error'); }
+  cargar();
+}
+async function quitar(id) {
+  try { await api('/carro-arriendo/' + id + '/', { method: 'DELETE' }); cargar(); }
+  catch (e) { toast(msg(e), 'error'); }
+}
+vaciar.onclick = async () => { await api('/carro-arriendo/', { method: 'DELETE' }); cargar(); };
+confirmar.onclick = async () => {
+  try {
+    await api('/contratos/checkout/', { method: 'POST' });
+    toast('Contrato generado');
+    setTimeout(() => location.href = '/mis-contratos/', 800);
+  } catch (e) { toast(msg(e), 'error'); }
+};
+if (requerir('CLIENTE')) cargar();
+</script>
+{% endblock %}

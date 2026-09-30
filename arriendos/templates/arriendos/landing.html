@@ -1,0 +1,30 @@
+{% extends 'arriendos/base.html' %}
+{# landing.html: página de inicio con hero, categorías y pasos. #}
+{% block content %}
+<section class="hero">
+  <h1>Maquinaria pesada, <span>lista para tu obra</span></h1>
+  <p>MaquiRent arrienda excavadoras, andamios, generadores y más. Cotiza por días, paga en línea y recibe tu equipo.</p>
+  <a class="btn" href="/catalogo/">Ver catálogo</a>
+</section>
+<div class="container">
+  <h2>Nuestras categorías</h2>
+  <p class="sub">Todo lo que tu construcción necesita en un solo lugar.</p>
+  <div class="grid" id="cats"></div>
+  <h2 style="margin-top:44px">¿Cómo funciona?</h2>
+  <div class="pasos">
+    <div class="card paso"><b>1</b><h3>Elige</h3><p>Explora el catálogo y filtra por categoría o precio.</p></div>
+    <div class="card paso"><b>2</b><h3>Agenda</h3><p>Define fechas de inicio y término en tu carro de arriendo.</p></div>
+    <div class="card paso"><b>3</b><h3>Confirma</h3><p>Genera tu contrato y registra el pago.</p></div>
+    <div class="card paso"><b>4</b><h3>Recibe</h3><p>Retiramos y devolvemos el equipo según tu contrato.</p></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(async () => {
+  const cats = await api('/categorias/', { auth: false });
+  document.getElementById('cats').innerHTML = cats.map(c =>
+    `<a class="card cat" href="/catalogo/?categoria=${c.id}"><div class="ico">${ICONOS[c.nombre] || '🔧'}</div><h3>${esc(c.nombre)}</h3></a>`).join('');
+})();
+</script>
+{% endblock %}

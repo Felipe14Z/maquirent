@@ -1,0 +1,13 @@
+categoria,marca,nombre,descripcion,tarifa_diaria,garantia,stock,stock_minimo,imagen
+Movimiento de Tierra,Bobcat,Minicargador,Minicargador compacto con balde de 0.5 m3,85000,200000,4,2,minicargador.jpg
+Movimiento de Tierra,Komatsu,Bulldozer,Topadora sobre orugas para movimiento de tierra,220000,600000,2,1,bulldozer.jpg
+Movimiento de Tierra,Caterpillar,Motoniveladora,Motoniveladora para nivelacion de caminos,240000,650000,2,1,motoniveladora.jpg
+Trabajo en Altura,JLG,Plataforma articulada,Plataforma con brazo articulado de 16 m,95000,220000,3,2,plataforma_articulada.jpg
+Trabajo en Altura,Manitou,Elevador telescopico,Manipulador telescopico de 12 m de alcance,120000,300000,3,2,elevador_telescopico.jpg
+Energía y Respaldo,Atlas Copco,Compresor de aire,Compresor portatil diesel de 185 CFM,45000,100000,5,2,compresor.jpg
+Energía y Respaldo,Cummins,Grupo electrógeno 100 kVA,Grupo electrogeno diesel de alta potencia,75000,180000,3,2,grupo_electrogeno.jpg
+Energía y Respaldo,Lincoln Electric,Soldadora,Soldadora electrica industrial de 300 A,18000,45000,6,2,soldadora.jpg
+Obras Civiles y Hormigón,Wacker Neuson,Placa compactadora,Placa vibratoria reversible de 90 kg,16000,40000,7,2,placa_compactadora.jpg
+Obras Civiles y Hormigón,Hamm,Rodillo compactador,Rodillo vibratorio de suelos de 7 toneladas,130000,350000,2,1,rodillo.jpg
+Obras Civiles y Hormigón,Husqvarna,Cortadora de pavimento,Cortadora de asfalto y hormigon con disco de 400 mm,24000,55000,4,2,cortadora.jpg
+Obras Civiles y Hormigón,Bosch,Martillo demoledor,Martillo demoledor electrico de 30 kg,14000,35000,5,2,martillo.jpg
